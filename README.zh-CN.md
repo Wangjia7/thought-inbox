@@ -4,7 +4,7 @@
 
 ## 下载后先安装
 
-使用 **thought-inbox-1.0.0-install.zip**，无需安装开发工具或执行构建。
+使用 **thought-inbox-1.1.0-install.zip**，无需安装开发工具或执行构建。
 
 1. 解压得到 `thought-inbox` 文件夹。
 2. 在当前 Obsidian 的 **Settings → Files and links → Override config folder** 查看实际配置目录。默认是 `.obsidian`，但以你的设置为准。
@@ -35,10 +35,11 @@
 | Open question queue | 打开问题队列，也可点左侧收件箱图标。 |
 | Import discussion result | 粘贴讨论结果 JSON，预览后回填。 |
 | Edit current thought | 编辑当前收件箱笔记。 |
+| Upgrade legacy notes | 备份并升级旧笔记，保留原 ID 与个人判断。 |
 
 界面字段：Original text＝原文；My thought＝我的想法；Source＝来源；Project＝项目；Status＝状态；Model conclusion＝模型结论；My judgment＝我的判断。公开版本界面使用英文，内容支持中文。
 
-默认保存到 `Thought Inbox/`，每条思考是一篇普通 Markdown 笔记。可在插件设置搜索 **Inbox folder** 并修改路径，点 **Save folder** 保存。路径相对于 Vault 根目录，不能用绝对路径、隐藏目录、`..` 或 Vault 配置目录。换目录不会迁移已有笔记；切回旧路径可再次看到它们。
+无需填写标题，自动使用 `思考 · 2026-10-05 14:30:05` 这样的日期时间标题，文件名也使用日期时间，不再显示随机 ID。同秒保存会加数字后缀避免覆盖。默认保存到 `Thought Inbox/`，每条思考是一篇普通 Markdown 笔记。可在插件设置搜索 **Inbox folder** 并修改路径，点 **Save folder** 保存。路径相对于 Vault 根目录，不能用绝对路径、隐藏目录、`..` 或 Vault 配置目录。换目录不会迁移已有笔记；切回旧路径可再次看到它们。
 
 状态有 `inbox`（待整理）、`ready`（待讨论）、`discussing`（讨论中）、`resolved`（已解决）、`archived`（归档）。默认队列展示前三种，切换 All statuses 可看到全部。支持文本搜索、项目筛选和状态筛选。
 
@@ -67,7 +68,11 @@ ID 仅可使用字母、数字、连字符和下划线，长度 1–100。不存
 
 ## 数据保护与手工编辑
 
-不要删除或更改 `<!-- thought-inbox:... -->` 注释和 ID。可直接修改 original/thought/model/judgment 标记之间的正文；元数据用表单编辑。自由笔记请加在 `<!-- thought-inbox:end -->` 后面，回填时会保留。管理区内的标题与摘要会重新生成。
+新版正文没有 `<!-- thought-inbox:... -->` 标记，也没有 Project/Status/ID 摘要行。ID、项目、状态、来源等保存在 Obsidian 笔记属性中；队列隐藏原始 ID，但可点 Copy ID 复制。
+
+正文用标题和引用块显示原文、想法和讨论。手动修改时保留章节标题和引用格式（以 `> ` 开头）；也可以直接用插件表单编辑。在 **Personal notes** 下面自由写附注，更新时会保留。额外的笔记属性同样会保留。
+
+**升级已有笔记：** 更新插件并重新启用后，按 `⌘P` 搜索 **Thought Inbox: Upgrade legacy notes**，运行一次。旧笔记先在旁边保存完整 `.v1.bak` 备份，再转成干净正文；随机 ID 文件名改为日期时间，自定义过的文件名保留。原文、想法、分支、自己的判断和 ID 不变。可重复运行；损坏或重复 ID 的笔记会报错并停止，不会猜测恢复。备份不出现在队列中。旧笔记在保存/导入时也会备份并升级正文。新版格式不能由 1.0.0 读取，降级前应恢复备份。
 
 表单打开后若笔记被其他操作修改，保存会拒绝覆盖，重新打开表单即可。重复 ID、损坏的标记或不支持的格式会显示具体文件，修复前暂停更新。不要通过复制整篇收件箱笔记创建新条目；请重新捕捉以获取新 ID。
 
@@ -77,6 +82,6 @@ ID 仅可使用字母、数字、连字符和下划线，长度 1–100。不存
 
 ## 验证与发布
 
-已通过 20 项自动测试、严格类型检查、官方 Obsidian ESLint 规则、构建与发布文件检查。最低版本为 1.13.7；API 包锁定为 1.13.1，使用的设置搜索接口从应用 1.13.0 提供。尚未完成桌面实机启用后的端到端验收和移动设备验收，详见 [VALIDATION.md](VALIDATION.md)。
+已通过 28 项自动测试、严格类型检查、官方 Obsidian ESLint 规则、构建与发布文件检查。最低版本为 1.13.7；API 包锁定为 1.13.1，使用的设置搜索接口从应用 1.13.0 提供。尚未完成桌面实机启用后的端到端验收和移动设备验收，详见 [VALIDATION.md](VALIDATION.md)。
 
 [GitHub 发布与市场提交步骤](PUBLISHING.md)。本包准备好提交所需结构，但尚未在市场上架；官方当前使用 **community.obsidian.md 网站提交**，不再以给 `community-plugins.json` 提 PR 为操作指引。

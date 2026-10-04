@@ -1,6 +1,6 @@
 # GitHub 发布与 Obsidian Community 提交
 
-核对日期：2026-10-05。此文件说明你需要执行的公开发布操作；本次交付没有创建远程仓库、Release 或市场条目。
+核对日期：2026-10-05。此文件说明你需要执行的公开发布操作；公开源码仓库为 https://github.com/Wangjia7/thought-inbox；市场条目尚未提交。
 
 ## 1. 建立公开源码仓库
 
@@ -25,25 +25,25 @@ git push -u origin main
 
 在独立测试 Vault 手动安装三个编译文件后，按 [VALIDATION.md](VALIDATION.md) 的验收表验证加载、剪贴板、选中文本、队列、讨论和重复导入。当前自动验证不等于已经完成桌面或手机的端到端测试。`isDesktopOnly: false` 基于使用浏览器与公开 Obsidian API；发布给手机用户前至少完成一台 iOS/Android 设备验收，并如实记录实际覆盖。
 
-## 3. 发布 1.0.0
+## 3. 发布 1.1.0
 
 仓库包含 tag 触发的 `.github/workflows/release.yml`。确认仓库允许 GitHub Actions 运行。该 workflow 在通过检查后自动创建公开 Release，因此推 tag 前应已经完成上一步的人工验收。
 
 ```sh
-git tag 1.0.0
-git push origin 1.0.0
+git tag 1.1.0
+git push origin 1.1.0
 ```
 
-不要使用 `v1.0.0`。tag 必须与 `manifest.json.version` **完全一致**。等待 Actions 成功，然后打开 Releases 确认：
+不要使用 `v1.1.0`。tag 必须与 `manifest.json.version` **完全一致**。等待 Actions 成功，然后打开 Releases 确认：
 
-- Release tag 是 `1.0.0`，状态为已发布，非 draft、非 prerelease。
+- Release tag 是 `1.1.0`，状态为已发布，非 draft、非 prerelease。
 - **独立附件**包含 `main.js`、`manifest.json`、`styles.css`。
 - 另有 `thought-inbox.zip` 可供手动安装。
-- 根目录 manifest 和 Release 附件的 manifest 是同一版本，且版本映射为 `"1.0.0": "1.13.7"`。
+- 根目录 manifest 和 Release 附件的 manifest 是同一版本，且版本映射为 `"1.1.0": "1.13.7"`。
 
 只上传 ZIP 或只有 GitHub 自动生成的 Source code ZIP 不够，Obsidian 需要三个独立资产。
 
-如果不用 Actions，在本地 `npm run check` 成功后，在 GitHub → Releases → Draft a new release，选择或创建 tag `1.0.0`，上传这三个文件，填初版说明并发布。不要再同时推 tag 触发自动创建同一个 Release；二选一即可。
+如果不用 Actions，在本地 `npm run check` 成功后，在 GitHub → Releases → Draft a new release，选择或创建 tag `1.1.0`，上传这三个文件，填初版说明并发布。不要再同时推 tag 触发自动创建同一个 Release；二选一即可。
 
 ## 4. 提交当前 Community 目录
 
@@ -64,13 +64,13 @@ git push origin 1.0.0
 npm version patch --no-git-tag-version
 npm run check
 git add .
-git commit -m "Release 1.0.1"
+git commit -m "Release 1.1.1"
 git push origin main
-git tag 1.0.1
-git push origin 1.0.1
+git tag 1.1.1
+git push origin 1.1.1
 ```
 
-其中示例 `1.0.1` 必须替换为实际新版本。保留 versions.json 中的历史映射与旧 Releases，供较旧应用版本选择兼容版本。提交和审核时仍需平台处理；本包不能保证自动审核一定通过。
+其中示例 `1.1.1` 必须替换为实际新版本。保留 versions.json 中的历史映射与旧 Releases，供较旧应用版本选择兼容版本。提交和审核时仍需平台处理；本包不能保证自动审核一定通过。
 
 ## 官方依据
 

@@ -3,14 +3,15 @@ import assert from 'node:assert/strict';
 import type { Vault } from 'obsidian';
 import { TFile, TFolder } from './obsidian-stub';
 import { ThoughtStore } from '../src/store';
-import { parseDocument, newDocument, renderDocument } from '../src/model';
+import { readableFilename, parseDocument, newDocument, renderDocument } from '../src/model';
+import { renderDocument as legacyRender, newDocument as legacyNew } from './legacy/model-v1';
 import { thought } from './fixtures';
 class MemoryVault {
   configDir = '.test-config';
   files = new Map<string, { file: TFile; content: string }>();
   folders = new Map<string, TFolder>();
   writes = 0;
-  getMarkdownFiles(): TFile[] { return [...this.files.values()].map(e => e.file); }
+  getMarkdownFiles(): TFile[] { return [...this.files.values()].map(e => e.file).filter(f => f.path.endsWith('.md')); }
   getAbstractFileByPath(path: string): TFile | TFolder | undefined { return this.files.get(path)?.file ?? this.folders.get(path); }
   async read(file: TFile): Promise<string> {
     const entry = this.files.get(file.path); if (!entry) throw new Error('Not found'); return entry.content;
@@ -34,7 +35,7 @@ function fixture(): { vault: MemoryVault; store: ThoughtStore } {
 }
 test('Creation builds nested vault folders and a loadable Markdown record', async () => {
   const { vault, store } = fixture(); const file = await store.create(thought());
-  assert.equal(file.path, 'Projects/Thought Inbox/thought-123.md');
+  assert.equal(file.path, `Projects/Thought Inbox/${readableFilename(thought())}.md`);
   assert.equal(vault.folders.size, 2); assert.equal((await store.scan()).entries.length, 1);
   await assert.rejects(store.create(thought()), /already exists/);
 });
@@ -88,8 +89,33 @@ test('Personal appendix survives store-level import; malformed branch is never e
   const value = vault.files.get(file.path); assert.ok(value); value.content += '\nManual appendix';
   await store.importDiscussion({ thoughtId: 'thought-123', branchId: 'b', modelConclusion: 'X' });
   assert.ok(value.content.endsWith('Manual appendix'));
-  value.content = value.content.replace('<!-- thought-inbox:/branch -->', '');
+  value.content = value.content.replace('#### My judgment', '#### Broken judgment');
   const before = value.content;
   await assert.rejects(store.importDiscussion({ thoughtId: 'thought-123', branchId: 'b', modelConclusion: 'Y' }));
   assert.equal(value.content, before);
+});
+
+test('Same-second captures use readable, collision-free filenames and independent IDs', async () => {
+  const { store } = fixture(); const a = await store.create(thought('a')); const b = await store.create(thought('b'));
+  assert.notEqual(a.path, b.path); assert.ok(b.path.endsWith(' (2).md')); assert.equal((await store.scan()).entries.length, 2);
+});
+test('Legacy upgrade backs up exact originals, renames UUID filenames and remains idempotent', async () => {
+  const vault = new MemoryVault(); const path = 'Projects/Thought Inbox/thought-123.md';
+  const raw = legacyRender(legacyNew(thought())); await vault.create(path, raw);
+  const store = new ThoughtStore(vault as unknown as Vault, () => 'Projects/Thought Inbox', async (file, next) => { vault.rename(file.path, next); });
+  assert.equal(await store.upgradeLegacyNotes(), 1);
+  assert.equal(vault.files.get(`${path}.v1.bak`)?.content, raw);
+  const entry = (await store.scan()).entries[0]; assert.ok(entry); assert.equal(entry.document.thought.id, 'thought-123');
+  assert.ok(entry.file.path.includes('思考 ')); assert.ok(!entry.raw.includes('<!-- thought-inbox:'));
+  assert.equal(await store.upgradeLegacyNotes(), 0);
+  await store.importDiscussion({ thoughtId: 'thought-123', branchId: 'b', modelConclusion: 'New' });
+  assert.equal((await store.scan()).entries[0]?.document.thought.branches.length, 1);
+});
+test('Legacy import makes a backup and preserves prior personal judgment during format upgrade', async () => {
+  const { vault, store } = fixture(); const t = thought(); t.branches.push({ id: 'b', modelConclusion: 'Old', userJudgment: 'Independent', source: '', updatedAt: t.updatedAt });
+  const path = 'Projects/Thought Inbox/legacy.md'; const raw = legacyRender(legacyNew(t)); await vault.create(path, raw);
+  await store.importDiscussion({ thoughtId: t.id, branchId: 'b', modelConclusion: 'New' });
+  assert.equal(vault.files.get(`${path}.v1.bak`)?.content, raw);
+  assert.equal((await store.scan()).entries[0]?.document.thought.branches[0]?.userJudgment, 'Independent');
+  assert.ok(!vault.files.get(path)?.content.includes('<!-- thought-inbox:'));
 });

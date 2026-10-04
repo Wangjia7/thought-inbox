@@ -1,5 +1,4 @@
-import { parseYaml, stringifyYaml } from 'obsidian';
-/** Local validation and versioned Markdown format, using the host YAML APIs. */
+/** Local data format and validation, independent of the Obsidian runtime. */
 export const STATUSES = ['inbox', 'ready', 'discussing', 'resolved', 'archived'] as const;
 export type Status = typeof STATUSES[number];
 export interface Branch {
@@ -25,8 +24,6 @@ export interface Document {
   thought: Thought;
   prefix: string;
   suffix: string;
-  schema?: number;
-  properties?: Record<string, unknown>;
 }
 export interface ImportPayload {
   thoughtId: string;
@@ -88,6 +85,30 @@ export function validateInboxPath(input: string, configDir: string): string {
   if (path === config || path.startsWith(`${config}/`)) throw new Error('The inbox cannot be inside the vault configuration folder.');
   return path;
 }
+function region(name: string, value: string): string {
+  return `${MARKER}${name} -->\n${value}\n${MARKER}/${name} -->`;
+}
+export function renderDocument(document: Document): string {
+  const t = validateThought(document.thought);
+  const { original, userThought, branches, ...meta } = t;
+  const content = [
+    `${MARKER}record ${JSON.stringify({ schema: 1, ...meta }).replace(/>/g, '\\u003e')} -->`,
+    `# ${t.title.replace(/\n/g, ' ')}`,
+    `Project: ${t.project.replace(/\n/g, ' ')}  \nStatus: ${t.status}  \nSource: ${t.source.replace(/\n/g, ' ')}  \nID: ${t.id}`,
+    `## Original text\n\n${region('original', original)}`,
+    `## My thought\n\n${region('thought', userThought)}`,
+    '## Discussions',
+    ...branches.map(b => {
+      const { modelConclusion, userJudgment, ...metadata } = b;
+      return [`${MARKER}branch ${JSON.stringify(metadata).replace(/>/g, '\\u003e')} -->`, `### ${b.id}`, `Discussion source: ${b.source.replace(/\n/g, ' ')}`,
+        `#### Model conclusion\n\n${region('model', modelConclusion)}`,
+        `#### My judgment\n\n${region('judgment', userJudgment)}`, `${MARKER}/branch -->`].join('\n\n');
+    }), END
+  ].join('\n\n');
+  const result = document.prefix + content + document.suffix;
+  if (result.length > MAX_DOCUMENT) throw new Error('This note exceeds the 2 MB text limit.');
+  return result;
+}
 function extractRegion(content: string, name: string): string {
   const start = `${MARKER}${name} -->\n`;
   const end = `\n${MARKER}/${name} -->`;
@@ -97,7 +118,7 @@ function extractRegion(content: string, name: string): string {
   }
   return content.slice(a + start.length, b);
 }
-function parseLegacyDocument(raw: string): Document {
+export function parseDocument(raw: string): Document {
   if (raw.length > MAX_DOCUMENT) throw new Error('This note exceeds the 2 MB text limit.');
   const content = raw.replace(/\r\n/g, '\n');
   const start = `${MARKER}record `;
@@ -122,75 +143,11 @@ function parseLegacyDocument(raw: string): Document {
     throw new Error('Damaged or unexpected content markers. Restore the note before updating it.');
   }
   const thought = validateThought({ ...meta, original: extractRegion(managed, 'original'), userThought: extractRegion(managed, 'thought'), branches });
-  thought.title = automaticTitle(thought.createdAt);
-  const prefix = content.slice(0, a);
-  const yaml = prefix.match(/^---\n([\s\S]*?)\n---/);
-  const properties = yaml ? object(parseYaml(yaml[1] ?? '') as unknown) : {};
-  return { thought, prefix, suffix: content.slice(b + END.length), schema: 1, properties };
-}
-export function automaticTitle(createdAt: string): string {
-  const date = new Date(timestamp(createdAt));
-  const pad = (n: number): string => String(n).padStart(2, '0');
-  return `思考 · ${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
-}
-export function readableFilename(t: Thought): string {
-  return automaticTitle(t.createdAt).replace(' · ', ' ').replace(/:/g, '-');
-}
-function quote(value: string): string { return value.split('\n').map(line => `> ${line}`).join('\n'); }
-function unquote(value: string): string {
-  if (!value.split('\n').every(line => line.startsWith('> '))) throw new Error('Keep the text inside its blockquote, or edit it using the plugin form.');
-  return value.split('\n').map(line => line.slice(2)).join('\n');
-}
-const PERSONAL = '## Personal notes';
-function personalNotes(doc: Document): string {
-  if (doc.schema !== 1) return doc.prefix + doc.suffix;
-  const preface = doc.prefix.replace(/^---\n[\s\S]*?\n---\n*/, '');
-  const suffix = doc.suffix.replace('<!-- Add personal notes below this line; they are preserved on updates. -->', '');
-  return preface + suffix;
-}
-export function renderDocument(document: Document): string {
-  const t = validateThought({ ...document.thought, title: automaticTitle(document.thought.createdAt) });
-  const properties = { ...document.properties, thought_inbox_schema: 2, thought_id: t.id, title: t.title,
-    project: t.project, status: t.status, source: t.source, created: t.createdAt, updated: t.updatedAt,
-    thought_inbox_branches: JSON.stringify(t.branches.map(({ id, source, updatedAt }) => ({ id, source, updatedAt }))) };
-  const sections = [`## Original text\n\n${quote(t.original)}`, `## My thought\n\n${quote(t.userThought)}`, '## Discussions',
-    ...t.branches.flatMap(b => [`### ${b.id}`, `#### Model conclusion\n\n${quote(b.modelConclusion)}`, `#### My judgment\n\n${quote(b.userJudgment)}`])];
-  const result = `---\n${stringifyYaml(properties)}---\n\n${sections.join('\n\n')}\n\n${PERSONAL}\n\n${personalNotes(document)}`;
-  if (result.length > MAX_DOCUMENT) throw new Error('This note exceeds the 2 MB text limit.');
-  return result;
-}
-export function parseDocument(raw: string): Document {
-  if (raw.length > MAX_DOCUMENT) throw new Error('This note exceeds the 2 MB text limit.');
-  const normalized = raw.replace(/\r\n/g, '\n');
-  const frontmatter = normalized.match(/^---\n([\s\S]*?)\n---\n*/);
-  if (!frontmatter) return parseLegacyDocument(raw);
-  const properties = object(parseYaml(frontmatter[1] ?? '') as unknown);
-  if (properties.thought_inbox_schema === 1) return parseLegacyDocument(raw);
-  if (properties.thought_inbox_schema !== 2) throw new Error('Unsupported note schema.');
-  const branchData: unknown = typeof properties.thought_inbox_branches === 'string' ? JSON.parse(properties.thought_inbox_branches) as unknown : properties.thought_inbox_branches;
-  if (!Array.isArray(branchData)) throw new Error('Missing branch metadata.');
-  const metadata = branchData.map(object);
-  const body = normalized.slice(frontmatter[0].length);
-  const personal = body.indexOf(`\n\n${PERSONAL}\n\n`);
-  if (personal < 0) throw new Error('Missing personal notes heading.');
-  const managed = body.slice(0, personal);
-  const headings = [...managed.matchAll(/^(#{2,4} .+)(?:\n\n|$)/gm)];
-  const expected = ['## Original text', '## My thought', '## Discussions', ...metadata.flatMap(b => [`### ${validateId(b.id)}`, '#### Model conclusion', '#### My judgment'])];
-  if (headings.length !== expected.length || headings.some((m, i) => m[1] !== expected[i]) || headings[0]?.index !== 0) throw new Error('Missing or unexpected section headings. Restore them before updating.');
-  const values = headings.map((m, i) => {
-    const next = headings[i + 1]?.index ?? managed.length;
-    let value = managed.slice((m.index ?? 0) + m[0].length, next);
-    if (headings[i + 1]) value = value.replace(/\n\n$/, '');
-    return value;
-  });
-  if (values[2] !== '' || metadata.some((_b, i) => values[3 + i * 3] !== '')) throw new Error('Put discussion text inside the model or judgment sections.');
-  const branches = metadata.map((b, i) => branch({ ...b, modelConclusion: unquote(values[4 + i * 3] ?? ''), userJudgment: unquote(values[5 + i * 3] ?? '') }));
-  const thought = validateThought({ id: properties.thought_id, title: automaticTitle(String(properties.created)), original: unquote(values[0] ?? ''), userThought: unquote(values[1] ?? ''),
-    source: properties.source ?? '', project: properties.project ?? '', status: properties.status, createdAt: properties.created, updatedAt: properties.updated, branches });
-  return { thought, prefix: '', suffix: body.slice(personal + `\n\n${PERSONAL}\n\n`.length), schema: 2, properties };
+  return { thought, prefix: content.slice(0, a), suffix: content.slice(b + END.length) };
 }
 export function newDocument(t: Thought): Document {
-  return { thought: validateThought({ ...t, title: automaticTitle(t.createdAt) }), prefix: '', suffix: '', schema: 2 };
+  validateThought(t);
+  return { thought: t, prefix: `---\nthought_inbox_schema: 1\nthought_id: ${JSON.stringify(t.id)}\n---\n\n`, suffix: '\n\n<!-- Add personal notes below this line; they are preserved on updates. -->\n' };
 }
 export function parseImport(input: string): ImportPayload {
   if (input.length > 500_000) throw new Error('Import is limited to 500,000 characters.');

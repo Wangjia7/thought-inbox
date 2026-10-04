@@ -1,6 +1,6 @@
 import { App, ItemView, Modal, Notice, PluginSettingTab, Setting, SettingDefinitionItem, TextAreaComponent, WorkspaceLeaf, normalizePath } from 'obsidian';
 import type ThoughtInboxPlugin from '../main';
-import { Branch, ImportPayload, STATUSES, Status, Thought, errorMessage, parseImport, updateDiscussion, validateInboxPath } from './model';
+import { Branch, ImportPayload, STATUSES, Status, Thought, automaticTitle, errorMessage, parseImport, updateDiscussion, validateInboxPath } from './model';
 import { Entry, Scan } from './store';
 export const VIEW_TYPE = 'thought-inbox-queue';
 function makeId(): string {
@@ -36,7 +36,7 @@ export class CaptureModal extends Modal {
     super(plugin.app);
     const now = new Date().toISOString();
     this.thought = entry ? { ...entry.document.thought, branches: entry.document.thought.branches.map(b => ({ ...b })) } : {
-      id: makeId(), title: '', original, userThought: '', source, project: '', status: 'inbox', createdAt: now, updatedAt: now, branches: []
+      id: makeId(), title: automaticTitle(now), original, userThought: '', source, project: '', status: 'inbox', createdAt: now, updatedAt: now, branches: []
     };
   }
   setOriginal(value: string): void {
@@ -45,7 +45,7 @@ export class CaptureModal extends Modal {
   onOpen(): void {
     this.contentEl.addClass('thought-inbox-modal');
     this.setTitle(this.entry ? 'Edit thought' : 'Capture thought');
-    input(this.contentEl, 'Title', this.thought.title, v => { this.thought.title = v; });
+
     this.originalInput = area(this.contentEl, 'Original text', this.thought.original, v => { this.thought.original = v; });
     area(this.contentEl, 'My thought', this.thought.userThought, v => { this.thought.userThought = v; });
     input(this.contentEl, 'Source', this.thought.source, v => { this.thought.source = v; });
@@ -58,7 +58,7 @@ export class CaptureModal extends Modal {
           b.setDisabled(true);
           try {
             if (!this.thought.original.trim() && !this.thought.userThought.trim()) throw new Error('Enter original text or your thought.');
-            if (!this.thought.title.trim()) this.thought.title = (this.thought.userThought || this.thought.original).trim().split('\n')[0]?.slice(0, 100) || 'Untitled thought';
+            this.thought.title = automaticTitle(this.thought.createdAt);
             this.thought.updatedAt = new Date().toISOString();
             if (this.entry) await this.plugin.store.save(this.thought, this.entry.raw);
             else await this.plugin.store.create(this.thought);
@@ -79,7 +79,7 @@ export class BranchModal extends Modal {
     this.setTitle('Update discussion');
     this.contentEl.addClass('thought-inbox-modal');
     const t = this.entry.document.thought;
-    this.contentEl.createEl('p', { text: `${t.title} · ${t.id}`, cls: 'thought-inbox-meta' });
+    this.contentEl.createEl('p', { text: t.title, cls: 'thought-inbox-meta' });
     let branchId = '', selectedId = '', conclusion = '', judgment = '', source = '';
     let idInput: { setValue(value: string): unknown };
     let conclusionInput: TextAreaComponent, judgmentInput: TextAreaComponent;
@@ -223,7 +223,7 @@ export class QueueView extends ItemView {
     card.createEl('p', { text: `${t.status} · ${t.project || 'No project'} · ${t.branches.length} branches`, cls: 'thought-inbox-meta' });
     card.createEl('p', { text: (t.userThought || t.original).slice(0, 300), cls: 'thought-inbox-excerpt' });
     card.createEl('p', { text: `Source: ${t.source || 'None'}`, cls: 'thought-inbox-meta' });
-    card.createEl('p', { text: `ID: ${t.id}`, cls: 'thought-inbox-id' });
+
     for (const b of t.branches) {
       const branch = card.createEl('details');
       branch.createEl('summary', { text: b.id });

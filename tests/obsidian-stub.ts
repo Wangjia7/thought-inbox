@@ -1,3 +1,4 @@
+export { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 /** Minimal public API contract fixture; this is not an Obsidian runtime. */
 export class TFile { extension = 'md'; constructor(public path: string) {} }
 export class TFolder { constructor(public path: string) {} }

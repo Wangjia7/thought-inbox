@@ -12,7 +12,7 @@ export default class ThoughtInboxPlugin extends Plugin {
       try { this.settings.inboxPath = validateInboxPath(saved.inboxPath, this.app.vault.configDir); }
       catch { new Notice('Invalid inbox folder. Using the default inbox; your existing notes have not been moved.'); }
     }
-    this.store = new ThoughtStore(this.app.vault, () => this.settings.inboxPath);
+    this.store = new ThoughtStore(this.app.vault, () => this.settings.inboxPath, (file, path) => this.app.fileManager.renameFile(file, path));
     this.registerView(VIEW_TYPE, leaf => new QueueView(leaf, this));
     this.addSettingTab(new SettingsTab(this.app, this));
     this.addRibbonIcon('inbox', 'Open question queue', () => { this.run(() => this.openQueue()); });
@@ -25,6 +25,13 @@ export default class ThoughtInboxPlugin extends Plugin {
     this.addCommand({ id: 'capture-thought', name: 'Capture a thought', callback: () => { new CaptureModal(this, '', '').open(); } });
     this.addCommand({ id: 'open-queue', name: 'Open question queue', callback: () => { this.run(() => this.openQueue()); } });
     this.addCommand({ id: 'import-discussion', name: 'Import discussion result', callback: () => { new ImportModal(this).open(); } });
+    this.addCommand({ id: 'upgrade-legacy-notes', name: 'Upgrade legacy notes', callback: () => {
+      this.run(async () => {
+        const count = await this.store.upgradeLegacyNotes();
+        this.refreshQueue();
+        new Notice(`${count} legacy notes upgraded. Original .bak backups were preserved.`);
+      });
+    } });
     this.addCommand({ id: 'edit-thought', name: 'Edit current thought', checkCallback: checking => {
       const file = this.app.workspace.getActiveFile();
       if (!file || !this.store.contains(file.path)) return false;

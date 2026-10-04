@@ -1,10 +1,10 @@
 import { TFile, TFolder, Vault, normalizePath } from 'obsidian';
-import { Document, ImportPayload, Thought, errorMessage, newDocument, parseDocument, renderDocument, updateDiscussion, validateInboxPath } from './model';
+import { Document, ImportPayload, Thought, errorMessage, newDocument, parseDocument, readableFilename, renderDocument, updateDiscussion, validateInboxPath } from './model';
 export interface Entry { file: TFile; raw: string; document: Document }
 export interface Scan { entries: Entry[]; issues: string[] }
 export class ThoughtStore {
   private pending: Promise<unknown> = Promise.resolve();
-  constructor(private vault: Vault, private getFolder: () => string) {}
+  constructor(private vault: Vault, private getFolder: () => string, private renameFile?: (file: TFile, path: string) => Promise<void>) {}
   folder(): string { return normalizePath(validateInboxPath(this.getFolder(), this.vault.configDir)); }
   contains(path: string): boolean { return path.startsWith(`${this.folder()}/`) && path.endsWith('.md'); }
   private serialize<T>(task: () => Promise<T>): Promise<T> {
@@ -52,12 +52,42 @@ export class ThoughtStore {
           catch (error) { if (!(this.vault.getAbstractFileByPath(parent) instanceof TFolder)) throw error; }
         }
       }
-      return this.vault.create(`${this.folder()}/${thought.id}.md`, content);
+      return this.vault.create(this.availablePath(thought), content);
+    });
+  }
+  private availablePath(thought: Thought): string {
+    const base = `${this.folder()}/${readableFilename(thought)}`;
+    let path = `${base}.md`, number = 2;
+    while (this.vault.getAbstractFileByPath(path)) path = `${base} (${number++}).md`;
+    return path;
+  }
+  private async backup(entry: Entry): Promise<void> {
+    if (entry.document.schema !== 1) return;
+    let path = `${entry.file.path}.v1.bak`, number = 2;
+    while (this.vault.getAbstractFileByPath(path)) path = `${entry.file.path}.v1-${number++}.bak`;
+    await this.vault.create(path, entry.raw);
+  }
+  upgradeLegacyNotes(): Promise<number> {
+    return this.serialize(async () => {
+      const scan = await this.scan();
+      if (scan.issues.length) throw new Error(scan.issues.join('\n'));
+      const legacy = scan.entries.filter(e => e.document.schema === 1 || e.file.path.endsWith(`/${e.document.thought.id}.md`));
+      for (const entry of legacy) {
+        const converted = renderDocument(entry.document);
+        await this.backup(entry);
+        await this.vault.process(entry.file, current => {
+          if (current !== entry.raw) throw new Error('Note changed during upgrade. Run the command again.');
+          return converted;
+        });
+        if (this.renameFile && entry.file.path.endsWith(`/${entry.document.thought.id}.md`)) await this.renameFile(entry.file, this.availablePath(entry.document.thought));
+      }
+      return legacy.length;
     });
   }
   save(thought: Thought, expectedRaw: string): Promise<TFile> {
     return this.serialize(async () => {
       const entry = await this.find(thought.id);
+      await this.backup(entry);
       await this.vault.process(entry.file, current => {
         if (current !== expectedRaw) throw new Error('This note changed while the form was open. Reopen it to avoid overwriting your edits.');
         const doc = parseDocument(current);
@@ -69,7 +99,9 @@ export class ThoughtStore {
   importDiscussion(payload: ImportPayload): Promise<TFile> {
     return this.serialize(async () => {
       const entry = await this.find(payload.thoughtId);
+      await this.backup(entry);
       await this.vault.process(entry.file, current => {
+        if (entry.document.schema === 1 && current !== entry.raw) throw new Error('Legacy note changed during import. Retry to preserve its backup.');
         const doc = parseDocument(current);
         const thought = updateDiscussion(doc.thought, payload, new Date().toISOString());
         return renderDocument({ ...doc, thought });

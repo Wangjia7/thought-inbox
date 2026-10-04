@@ -14,7 +14,7 @@ Thought Inbox turns a selected passage or a clipboard excerpt into a question yo
 
 ## Installation before publication
 
-1. Download and unzip `thought-inbox-1.0.0-install.zip`.
+1. Download and unzip `thought-inbox-1.1.0-install.zip`.
 2. In Obsidian, open **Settings → Files and links → Override config folder** to check the actual configuration folder. Its default is `.obsidian`.
 3. Put the extracted `thought-inbox` folder inside `<vault>/<actual-config-folder>/plugins/`. The final directory must contain `main.js`, `manifest.json`, and `styles.css` directly. Avoid a second nested `thought-inbox` folder.
 4. Reload Obsidian. In **Settings → Community plugins**, enable community plugins if you choose to, then enable **Thought Inbox**.
@@ -34,8 +34,9 @@ The following command names appear with the automatic `Thought Inbox:` prefix. N
 | Open question queue | Opens the queue; the inbox ribbon icon does the same. |
 | Import discussion result | Opens the JSON preview and import form. |
 | Edit current thought | Edits the current note if it is in the configured inbox. |
+| Upgrade legacy notes | Backs up and converts 1.0.0 notes to the readable format, keeping IDs and judgments. |
 
-The capture form records **Original text**, **My thought**, **Source**, **Project**, and **Status**. Title is optional during capture and is derived from your thought or the first line of the excerpt. At least an excerpt or thought is required. A source may be a local note link, a URL, or a plain description; the plugin does not fetch it.
+The capture form records **Original text**, **My thought**, **Source**, **Project**, and **Status**. There is no title input. Titles are generated from the capture time, for example `思考 · 2026-10-05 14:30:05` (Thought · date and time). At least an excerpt or thought is required. A source may be a local note link, a URL, or a plain description; the plugin does not fetch it.
 
 The default inbox is `Thought Inbox/`. Change it using the searchable **Inbox folder** setting and **Save folder**. Only that folder and its subfolders are scanned. Changing the folder does not move old notes. Switch back to access the previous inbox, or move the notes yourself in Obsidian. Absolute paths, hidden folders, traversal, and the actual vault configuration folder are rejected.
 
@@ -62,15 +63,17 @@ Copy a thought ID from the queue. Paste one plain JSON object into **Import disc
 
 Choose **Preview**, verify the target note and branch, then **Apply import**. Unknown IDs are rejected. The source is optional: omitting it preserves the current branch source; explicitly passing an empty string clears it. A repeated branch ID updates in place, while a new one adds a branch. Your judgment, original text, thought, project and status are preserved. Unknown keys, arrays, and attempts to import `userJudgment` or `status` are rejected. Record your own judgment through the Discussion form.
 
-This is a local paste/import workflow. It does not connect to ChatGPT, detect branches automatically, or send excerpts to a model. There is no `obsidian://thought-inbox` handler in 1.0.0; old launcher apps are not needed.
+This is a local paste/import workflow. It does not connect to ChatGPT, detect branches automatically, or send excerpts to a model. There is no `obsidian://thought-inbox` handler; old launcher apps are not needed.
 
 ## Storage and safe editing
 
-Files initially use `<inbox>/<random-ID>.md`. Renaming a note inside the inbox does not change its identity. The stable record ID is stored in a metadata comment, with an immutable reference ID in frontmatter. The Markdown body contains separate original, thought, model-conclusion and personal-judgment sections.
+New filenames use `思考 YYYY-MM-DD HH-MM-SS.md`. Same-second captures receive a numeric suffix rather than overwriting one another. The stable ID is stored in YAML properties, along with title, project, status, source, timestamps and branch metadata. The queue hides the raw ID; **Copy ID** still copies it for imports. Renaming a note inside the inbox does not change its identity.
 
-The `<!-- thought-inbox:… -->` comments delimit plugin-owned sections. Use the plugin forms for metadata. You may edit the text *between* the original/thought/model/judgment markers, but keep all markers and metadata comments intact. Freeform notes before the managed block and after `<!-- thought-inbox:end -->` are preserved. Generated headings and summary lines inside the managed block are regenerated, so add unrelated writing after the end marker.
+The body contains readable headings and blockquotes, with no internal HTML markers or Project/Status/ID summary lines. Keep the original/thought/discussion headings and the blockquote structure intact when editing by hand, or use the plugin forms. Add freeform writing under **Personal notes**. Extra YAML properties are preserved. Both body and metadata are updated atomically using `Vault.process` to avoid partial record updates.
 
-Reserved Thought Inbox markers cannot be pasted as content. Each text field is limited to 200,000 characters, each note to 2,000,000 characters, an import to 500,000 characters, and a thought to 100 branches. These are text-length limits, not byte limits. If markers or metadata are damaged, the queue reports the file and refuses updates until repaired. Duplicate IDs are reported and block updates. Don't duplicate a plugin note to create a new thought; capture a new one instead.
+Version 1.0.0 notes remain readable by the plugin. To clean existing notes, run **Upgrade legacy notes**. Each legacy note receives an exact `.v1.bak` backup alongside the original before conversion. UUID filenames are renamed through Obsidian's file manager; custom filenames are kept. IDs, original text, personal thought, branches, judgments, and extra writing are preserved. Saving or importing into a legacy note also upgrades its content with a backup; run the upgrade command to convert remaining UUID filenames. The command is safe to run again. Damaged or duplicate notes abort conversion rather than being guessed or overwritten. Backups are excluded from the queue. A 1.0.0 plugin cannot read the new format; restore the backup before downgrading.
+
+Each text field is limited to 200,000 characters, each note to 2,000,000 characters, an import to 500,000 characters, and a thought to 100 branches. These are text-length limits, not byte limits. Missing sections or unsupported schemas reject updates. Duplicate IDs block updates; capture a new thought rather than duplicating an entire note.
 
 Edits compare the original form snapshot with the latest note inside `Vault.process`. If the note changed while a form was open, reopen it instead of overwriting that change. Plugin-initiated writes are serialized. Sync conflicts between devices still require normal Obsidian conflict resolution.
 
@@ -92,7 +95,7 @@ npm run check
 npm run dev
 ```
 
-`check` runs Obsidian's recommended ESLint rules, 20 automated tests, a strict TypeScript check, a minified CommonJS build, and release-metadata/bundle validation. `dev` watches source files. Runtime imports are externalized only for `obsidian`; no Node or Electron APIs are used by the plugin.
+`check` runs Obsidian's recommended ESLint rules, 28 automated tests, a strict TypeScript check, a minified CommonJS build, and release-metadata/bundle validation. `dev` watches source files. Runtime imports are externalized only for `obsidian`; no Node or Electron APIs are used by the plugin.
 
 Build tooling follows the [official sample plugin](https://github.com/obsidianmd/obsidian-sample-plugin), with a root `main.ts` entry and a locked API package (`obsidian@1.13.1`). The public API package version and app patch version need not match. Tests use a minimal host fixture for vault writes and command registration; they are not a substitute for loading the plugin in the actual app. See [VALIDATION.md](VALIDATION.md).
 

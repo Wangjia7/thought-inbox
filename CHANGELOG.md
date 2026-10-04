@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.1.0 — 2026-10-05
+
+- Remove the title input and generate date/time titles automatically.
+- Use readable date/time filenames with collision-safe numeric suffixes.
+- Move metadata to YAML properties and remove internal HTML comments and summary lines from the body.
+- Render original text, personal thoughts and discussions as readable Markdown blockquotes.
+- Hide raw IDs from queue cards while preserving Copy ID and ID-based imports.
+- Read legacy notes; add an upgrade command with exact local backups and safe renaming through Obsidian's file manager.
+- Preserve stable IDs, original text, personal judgments, freeform notes and custom properties during conversion.
+- Add regression tests for clean bodies, nested Markdown, properties, filename collisions and legacy migration (28 tests total).
+
 ## 1.0.0 — 2026-10-05
 
 - Capture selected text, the clipboard, or a manually entered thought.
