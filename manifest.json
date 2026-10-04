@@ -1,0 +1,9 @@
+{
+  "id": "thought-inbox",
+  "name": "Thought Inbox",
+  "version": "1.0.0",
+  "minAppVersion": "1.13.7",
+  "description": "Capture thoughts locally, review a question queue, and track discussion outcomes separately from your own judgments.",
+  "author": "jqwang",
+  "isDesktopOnly": false
+}

@@ -1,0 +1,33 @@
+name: Release
+on:
+  push:
+    tags:
+      - '[0-9]*.[0-9]*.[0-9]*'
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run check
+      - name: Check exact tag
+        env:
+          TAG: ${{ github.ref_name }}
+        run: node -e 'const m = require("./manifest.json"); if (process.env.TAG !== m.version) throw new Error("Tag must exactly match manifest version, without a v prefix");'
+      - name: Create install archive
+        run: |
+          mkdir -p release/thought-inbox
+          cp main.js manifest.json styles.css release/thought-inbox/
+          cd release
+          zip -r thought-inbox.zip thought-inbox
+      - name: Publish release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: gh release create "$TAG" main.js manifest.json styles.css release/thought-inbox.zip --verify-tag --title "$TAG" --generate-notes
