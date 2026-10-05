@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.0.0 — 2026-10-05
+
+- Introduce ThoughtGraph: Quote → Anchor → Thread with local SQLite, source pointers, short context, distinct provenance/reasoning edges and append-only thought events.
+- Bundle a local STDIO MCP server and focused Codex Skill; exact/ambiguous/unresolved fallback capture, no claim of native quote-click monitoring.
+- Add durable side/active threads, ideas, search/resume, open-question resolution, explicit user judgment revisions and history-preserving forks/merges.
+- Add capture ON/OFF, seven-day ephemeral retention, keep/undo/delete/trivial/detach and exact duplicate controls.
+- Add Obsidian thought browser with five views, text/project filters and continue-in-Codex prompts. Retain existing thought-inbox ID, settings and legacy commands.
+- Ship complete companion + plugin ZIP, separate plugin ZIP, third-party notices and SHA-256 checksums. Node 22.13+ required for companion; Obsidian minAppVersion remains 1.13.7.
+- Add synthetic scenarios A–E, Unicode/ambiguity/privacy/persistence/export and bundled MCP STDIO tests. Fix vulnerable development-only Moment dependency via compatible override.
+
+
 ## 1.1.0 — 2026-10-05
 
 - Remove the title input and generate date/time titles automatically.

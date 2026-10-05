@@ -2,9 +2,10 @@ import { MarkdownView, Notice, Plugin, TFile, debounce } from 'obsidian';
 import { ThoughtStore } from './src/store';
 import { errorMessage, validateInboxPath } from './src/model';
 import { CaptureModal, ImportModal, QueueView, SettingsTab, VIEW_TYPE } from './src/ui';
-export interface InboxSettings { inboxPath: string }
+import { GRAPH_VIEW, ThoughtGraphView } from './src/graph';
+export interface InboxSettings { inboxPath: string; graphPath: string }
 export default class ThoughtInboxPlugin extends Plugin {
-  settings: InboxSettings = { inboxPath: 'Thought Inbox' };
+  settings: InboxSettings = { inboxPath: 'Thought Inbox', graphPath: 'ThoughtGraph' };
   store!: ThoughtStore;
   async onload(): Promise<void> {
     const saved: unknown = await this.loadData();
@@ -12,6 +13,13 @@ export default class ThoughtInboxPlugin extends Plugin {
       try { this.settings.inboxPath = validateInboxPath(saved.inboxPath, this.app.vault.configDir); }
       catch { new Notice('Invalid inbox folder. Using the default inbox; your existing notes have not been moved.'); }
     }
+    if (saved && typeof saved === 'object' && 'graphPath' in saved && typeof saved.graphPath === 'string') {
+      try { this.settings.graphPath = validateInboxPath(saved.graphPath, this.app.vault.configDir); }
+      catch { new Notice('Invalid ThoughtGraph folder. Using the default folder.'); }
+    }
+    this.registerView(GRAPH_VIEW, leaf => new ThoughtGraphView(leaf, this));
+    this.addRibbonIcon('git-branch', 'Open thought browser', () => { this.run(() => this.openThoughtGraph()); });
+    this.addCommand({ id: 'open-thought-browser', name: 'Open thought browser', callback: () => { this.run(() => this.openThoughtGraph()); } });
     this.store = new ThoughtStore(this.app.vault, () => this.settings.inboxPath, (file, path) => this.app.fileManager.renameFile(file, path));
     this.registerView(VIEW_TYPE, leaf => new QueueView(leaf, this));
     this.addSettingTab(new SettingsTab(this.app, this));
@@ -42,12 +50,12 @@ export default class ThoughtInboxPlugin extends Plugin {
       return true;
     } });
     const refresh = debounce(() => this.refreshQueue(), 200, true);
-    const changed = (file: { path: string }): void => { if (this.store.contains(file.path)) refresh(); };
+    const changed = (file: { path: string }): void => { if (this.store.contains(file.path) || file.path === `${this.settings.graphPath}/graph.json`) refresh(); };
     this.registerEvent(this.app.vault.on('create', changed));
     this.registerEvent(this.app.vault.on('modify', changed));
     this.registerEvent(this.app.vault.on('delete', changed));
     this.registerEvent(this.app.vault.on('rename', (file, oldPath) => {
-      if (this.store.contains(file.path) || this.store.contains(oldPath)) refresh();
+      if (this.store.contains(file.path) || this.store.contains(oldPath) || [file.path, oldPath].includes(`${this.settings.graphPath}/graph.json`)) refresh();
     }));
     this.register(() => refresh.cancel());
   }
@@ -72,7 +80,18 @@ export default class ThoughtInboxPlugin extends Plugin {
     await leaf.loadIfDeferred();
     await this.app.workspace.revealLeaf(leaf);
   }
+  async openThoughtGraph(): Promise<void> {
+    const existing = this.app.workspace.getLeavesOfType(GRAPH_VIEW)[0];
+    const leaf = existing ?? this.app.workspace.getLeaf('tab');
+    if (!existing) await leaf.setViewState({ type: GRAPH_VIEW, active: true });
+    await leaf.loadIfDeferred();
+    await this.app.workspace.revealLeaf(leaf);
+  }
   refreshQueue(): void {
+    for (const leaf of this.app.workspace.getLeavesOfType(GRAPH_VIEW)) {
+      const view = leaf.view;
+      if (view instanceof ThoughtGraphView) this.run(() => view.refresh());
+    }
     for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE)) {
       const view = leaf.view;
       if (view instanceof QueueView) this.run(() => view.refresh());

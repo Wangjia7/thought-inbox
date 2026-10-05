@@ -20,14 +20,10 @@ jobs:
         env:
           TAG: ${{ github.ref_name }}
         run: node -e 'const m = require("./manifest.json"); if (process.env.TAG !== m.version) throw new Error("Tag must exactly match manifest version, without a v prefix");'
-      - name: Create install archive
-        run: |
-          mkdir -p release/thought-inbox
-          cp main.js manifest.json styles.css release/thought-inbox/
-          cd release
-          zip -r thought-inbox.zip thought-inbox
+      - name: Create complete installation packages
+        run: node scripts/package.mjs
       - name: Publish release assets
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
-        run: gh release create "$TAG" main.js manifest.json styles.css release/thought-inbox.zip --verify-tag --title "$TAG" --generate-notes
+        run: gh release create "$TAG" main.js manifest.json styles.css release/thought-inbox.zip "release/thoughtgraph-$TAG.zip" release/SHA256SUMS.txt --verify-tag --title "$TAG" --generate-notes

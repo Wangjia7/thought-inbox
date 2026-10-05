@@ -1,87 +1,54 @@
-# Thought Inbox / 思考收件箱
+# ThoughtGraph：从引用追踪思想演化
 
-把剪贴板或笔记选中的原文转为可追踪的问题，保留个人想法、来源、项目和状态，再按唯一 ID 回填讨论。模型结论和自己的判断分别记录，插件不调用任何模型服务。
+**Quote → Anchor → Thread**：记住一个想法最早从哪句话长出来，以及自己后来为什么改变了判断。
 
-## 下载后先安装
+[下载 2.0.0 完整包](https://github.com/Wangjia7/thought-inbox/releases/tag/2.0.0) · [完整安装说明](thoughtgraph/README.md) · [English](README.md)
 
-使用 **thought-inbox-1.1.0-install.zip**，无需安装开发工具或执行构建。
+这版将核心从“在 Obsidian 存一条笔记”改为“在 Codex 中继续思考”。你引用模型回答里的一句话并追问，配套 Skill 通过本地 MCP 创建引用锚点；再次追问或明确说“值得单独研究”后，提升为长期旁支。后续只记录问题、假设、证据、反驳和判断变化，不同步整段聊天，也不自动拆解所有模型回答。
 
-1. 解压得到 `thought-inbox` 文件夹。
-2. 在当前 Obsidian 的 **Settings → Files and links → Override config folder** 查看实际配置目录。默认是 `.obsidian`，但以你的设置为准。
-3. 将文件夹放进 `你的 Vault/实际配置目录/plugins/`。最终结构应为：
+## 先在 Codex 用，不连接 Vault
 
-```text
-你的 Vault/
-└── 实际配置目录/
-    └── plugins/
-        └── thought-inbox/
-            ├── main.js
-            ├── manifest.json
-            └── styles.css
-```
+1. 下载 **thoughtgraph-2.0.0.zip**，解压到长期保留的文件夹。完整包包含 MCP、Skill、安装辅助工具、许可证，以及可选 Obsidian 插件。
+2. 安装 **Node 22.13 或更新版本**。在解压目录运行：
 
-4. 重新加载 Obsidian，在 **Settings → Community plugins** 启用 Thought Inbox。应用版本需为 **1.13.7 或更新版本**。
-5. `⌘P`（Windows/Linux 为 `Ctrl+P`），搜索 **Thought Inbox**。
+   ```sh
+   node setup.mjs --write-skill
+   ```
 
-如果看不到命令，请检查：是否是当前 Vault 的配置目录、是否多套了一层文件夹、是否有 `main.js`、是否启用了插件、版本是否达到要求。源码 ZIP 也带编译好的文件，但安装时优先使用上面的安装 ZIP。
+3. 将生成的 `thoughtgraph-config.toml` 内容添加到 `~/.codex/config.toml`，保留已有配置。也可按生成的路径在 Codex MCP 设置中添加本地 STDIO 服务。重启 Codex，确认 ThoughtGraph 工具可用。
+4. 在对话里调用 **`$thoughtgraph`**，然后正常引用模型的一句话继续追问。Skill 激活时会调用 MCP，无须每次另点“保存”。新对话建议先显式调用一次 Skill；隐式识别不是必定发生。
+5. 可以直接说：
+   - “这个值得单独作为一个问题。”
+   - “把这个提升为 active thread。”
+   - “我现在不认同原先的判断，因为……”
+   - “我之前关于 topology universality 想到哪里了？”
+   - “关闭引用捕捉。”或“撤销最后一个引用锚点。”
 
-## 日常操作
+记录默认保存在 `~/.thoughtgraph/thoughtgraph.sqlite`，不需要 Vault、账号或 API key。辅助工具生成配置但不会自动修改 Codex 设置，不覆盖已有 Skill。其他路径、更新与连接方式见[完整说明](thoughtgraph/README.md)。
 
-| 命令 | 用途 |
-| --- | --- |
-| Capture selected text | 在笔记里先选中文字，再执行，自动记录原文与笔记来源。 |
-| Capture clipboard | 执行时读取一次剪贴板；若系统拒绝访问，就直接粘贴到 Original text。 |
-| Capture a thought | 手工输入一条想法。 |
-| Open question queue | 打开问题队列，也可点左侧收件箱图标。 |
-| Import discussion result | 粘贴讨论结果 JSON，预览后回填。 |
-| Edit current thought | 编辑当前收件箱笔记。 |
-| Upgrade legacy notes | 备份并升级旧笔记，保留原 ID 与个人判断。 |
+## 当前自动捕捉的实际范围
 
-界面字段：Original text＝原文；My thought＝我的想法；Source＝来源；Project＝项目；Status＝状态；Model conclusion＝模型结论；My judgment＝我的判断。公开版本界面使用英文，内容支持中文。
+这是 **Skill + MCP 半自动识别**，尚不能承诺监听 Codex App 的每一次 quote 点击。当前核实的官方接口中没有可直接接入的原生 quote event。捕捉依赖 Skill 激活，以及它能看到的引用和来源内容。
 
-无需填写标题，自动使用 `思考 · 2026-10-05 14:30:05` 这样的日期时间标题，文件名也使用日期时间，不再显示随机 ID。同秒保存会加数字后缀避免覆盖。默认保存到 `Thought Inbox/`，每条思考是一篇普通 Markdown 笔记。可在插件设置搜索 **Inbox folder** 并修改路径，点 **Save folder** 保存。路径相对于 Vault 根目录，不能用绝对路径、隐藏目录、`..` 或 Vault 配置目录。换目录不会迁移已有笔记；切回旧路径可再次看到它们。
+原句唯一匹配时保存精确位置与两侧各最多 160 个 UTF-16 单元的上下文；同句重复出现时标为“歧义”；原回复或真实消息 ID 不可见时标为“未定位/未知”，不伪造来源。不会读取 Codex 私有聊天数据库，不抓取 UI，不保存整条长回答或完整对话。公开接入依据：[MCP](https://learn.chatgpt.com/docs/extend/mcp)、[Skill](https://learn.chatgpt.com/docs/build-skills)、[Hooks](https://learn.chatgpt.com/docs/hooks)。
 
-状态有 `inbox`（待整理）、`ready`（待讨论）、`discussing`（讨论中）、`resolved`（已解决）、`archived`（归档）。默认队列展示前三种，切换 All statuses 可看到全部。支持文本搜索、项目筛选和状态筛选。
+## 这版提供什么
 
-## branch 回填
+- **引用锚点**：原句、初始问题、来源指针、定位可靠性，独立于整条消息。
+- **线程演化**：临时引用 → 旁支 → 活跃线程 → 研究想法，保留历史与起点。支持分支和合并。
+- **自己的判断**：模型建议与用户判断分开；判断改变时追加“之前 / 现在 / 原因”，保留旧版本。不会将模型回答自动当成用户已接受的知识。
+- **来源图与推理图分开**：来源关系解释思想从哪来；支持、反驳、修订等逻辑关系仅在明确表达时记录，不能从时间顺序推断。
+- **搜索与恢复**：找回起点、当前判断、待解决问题和分支，再继续讨论。
+- **隐私控制**：捕捉开关、7 天临时引用、长期保留、撤销、删除、标记无价值、解除关联、合并重复引用。服务停止期间不执行定时清理，下次启动或访问时继续清理。
 
-每条思考有独立 ID，队列可以复制。笔记在收件箱内重命名，ID 不变。
+## 以后连接 Obsidian
 
-- 点 **Discussion**，录入 branch ID、模型结论、讨论来源以及自己的判断。新增 ID 新增 branch；要改已有 branch，先从下拉框选它。
-- 同一条思考里的同一 branch ID 再次回填，会替换该 branch 当前的模型结论。插件不额外保存版本历史。
-- JSON 导入不会修改原文、想法、项目、状态或个人判断。个人判断必须由你在 Discussion 表单里填写。
+完整包的 `obsidian/thought-inbox/` 中有三个插件文件。也可下载独立的 `thought-inbox.zip`。将它们放入当前 Vault **实际配置文件夹**下的 `plugins/thought-inbox/`，重启并在社区插件中启用 **ThoughtGraph**。
 
-粘贴以下结构，替换为真实思考 ID，点击 **Preview** 核对目标，再点击 **Apply import**：
+最低应用版本 **Obsidian 1.13.7**。插件继续使用原 ID `thought-inbox`，避免已安装版本变成另一个插件。原收件箱笔记与命令保留，不会凭空把旧笔记转成新的思想来源链。
 
-```json
-{
-  "thoughtId": "从问题队列复制的实际ID",
-  "branchId": "branch-1",
-  "modelConclusion": "模型讨论得出的结论，可以包含换行转义。",
-  "discussionSource": "讨论标题或来源链接"
-}
-```
+为 MCP 配置一个 Vault 内的**新专用导出文件夹**，插件设置中的 **ThoughtGraph folder** 选择对应相对路径，然后在命令面板运行 **Open thought browser**。你可以浏览活跃线程、引用起点、待解决问题、判断变化和休眠旁支；复制“继续思考”指令回 Codex。生成的 `graph.json` 与 `ThoughtGraph.md` 是只读投影，修改通过 MCP 完成。没有硬编码 Vault 名称，不依赖外部 URI。
 
-ID 仅可使用字母、数字、连字符和下划线，长度 1–100。不存在的 ID、数组、其他字段会报错。不能把 `userJudgment` 或 `status` 放进 JSON。`discussionSource` 可以省略，省略保留原来源；传入空字符串表示清空。
+所有记录本地存储，工具无联网、遥测或上传。Codex 本身仍按其服务设置处理对话与工具结果；如果自行开启 Vault 同步，导出文件可能被同步服务上传。删除引用保留独立记录的长期问题与判断，备份另行管理。
 
-插件只做本地录入，不会自动读取 ChatGPT 分支或联网抓取链接。可从其他工具手动复制讨论结果。
-
-## 数据保护与手工编辑
-
-新版正文没有 `<!-- thought-inbox:... -->` 标记，也没有 Project/Status/ID 摘要行。ID、项目、状态、来源等保存在 Obsidian 笔记属性中；队列隐藏原始 ID，但可点 Copy ID 复制。
-
-正文用标题和引用块显示原文、想法和讨论。手动修改时保留章节标题和引用格式（以 `> ` 开头）；也可以直接用插件表单编辑。在 **Personal notes** 下面自由写附注，更新时会保留。额外的笔记属性同样会保留。
-
-**升级已有笔记：** 更新插件并重新启用后，按 `⌘P` 搜索 **Thought Inbox: Upgrade legacy notes**，运行一次。旧笔记先在旁边保存完整 `.v1.bak` 备份，再转成干净正文；随机 ID 文件名改为日期时间，自定义过的文件名保留。原文、想法、分支、自己的判断和 ID 不变。可重复运行；损坏或重复 ID 的笔记会报错并停止，不会猜测恢复。备份不出现在队列中。旧笔记在保存/导入时也会备份并升级正文。新版格式不能由 1.0.0 读取，降级前应恢复备份。
-
-表单打开后若笔记被其他操作修改，保存会拒绝覆盖，重新打开表单即可。重复 ID、损坏的标记或不支持的格式会显示具体文件，修复前暂停更新。不要通过复制整篇收件箱笔记创建新条目；请重新捕捉以获取新 ID。
-
-单个长文本字段上限 200,000 字符，整篇笔记上限 2,000,000 字符，导入 JSON 上限 500,000 字符，每条思考最多 100 个 branch。跨设备同步冲突仍按 Obsidian 常规方式处理。停用插件后，Markdown 笔记仍可阅读。
-
-所有插件处理都在本地，不联网、不遥测、不自动监控剪贴板，不要求账号。你自己配置的 Obsidian 同步、备份或其他插件可能访问这些普通笔记，保持原有行为。
-
-## 验证与发布
-
-已通过 28 项自动测试、严格类型检查、官方 Obsidian ESLint 规则、构建与发布文件检查。最低版本为 1.13.7；API 包锁定为 1.13.1，使用的设置搜索接口从应用 1.13.0 提供。尚未完成桌面实机启用后的端到端验收和移动设备验收，详见 [VALIDATION.md](VALIDATION.md)。
-
-[GitHub 发布与市场提交步骤](PUBLISHING.md)。本包准备好提交所需结构，但尚未在市场上架；官方当前使用 **community.obsidian.md 网站提交**，不再以给 `community-plugins.json` 提 PR 为操作指引。
+[旧收件箱使用与升级说明](docs/legacy-inbox.zh-CN.md) · [测试范围](VALIDATION.md) · [发布/市场提交步骤](PUBLISHING.md)。本次未连接实际 Vault，自动化验收使用合成数据；安装后仍需确认你使用的 Codex quote 格式与 Skill 激活情况。

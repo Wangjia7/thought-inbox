@@ -1,3 +1,33 @@
+# ThoughtGraph 2.0.0 validation
+
+Version 2.0.0: 29 plugin/model/browser regression checks plus 14 companion tests pass locally (43 total). TypeScript build, official Obsidian lint rules and CommonJS host dependency check pass. Built standalone MCP is tested with the official SDK client over STDIO. Dependency audit reports 0 advisories after the compatible Moment 2.31.0 development override.
+
+| Design scenario | Automated evidence | Remaining live check |
+| --- | --- | --- |
+| A: side sentence in long answer | 2,000+ word fixture, paragraph 17, exact UTF-16 offsets, short context, no full-text persistence | Actual Codex selected quote payload / visible source IDs |
+| B: three directions | Independent anchors; active, kept and seven-day ephemeral states | Skill activation during ordinary quoting |
+| C: side → active → research idea | Append-only promotion history, original quote retained | User-facing thread selection |
+| D: judgment changes | Before/after/reason appended; model suggestion never becomes user judgment | Explicit personal-statement interpretation by Skill |
+| E: resume later | Reopen real SQLite; idea/question IDs trace thread, quote and source pointers | Public original conversation remains accessible |
+
+Also tested: ambiguous/unknown sources, emoji and Chinese spans, capture OFF, retries, privacy deletion/orphan pointers, history-preserving fork/merge, separate graph types, invalid-operation rollback, searching/open-question resolution, owned export paths, symlink refusal, generated setup paths and strict MCP input validation.
+
+**Limits:** Scenarios use synthetic fixtures, not a connected live Vault. No native quote event API was verified and no all-quotes guarantee is made. The Skill supplies public visible source IDs if available; missing IDs stay null. Real Obsidian 1.13.7 UI rendering and live Codex Skill/quote activation are manual acceptance items. The plugin uses public `obsidian@1.13.1` API typings (currently published npm API version); minAppVersion remains 1.13.7. Node companion needs Node >=22.13; Node built-in SQLite may emit an experimental warning.
+
+Manual acceptance after installation:
+
+1. Invoke `$thoughtgraph`, quote a minor sentence and ask why. Verify tool result, location reliability, quote text and follow-up.
+2. Continue another meaningful question; confirm a side thread is created without an extra save click. Promote to active, then idea.
+3. State your own judgment and later revise it. Verify both versions; a model suggestion alone leaves current judgment empty.
+4. Restart the MCP, search the topic, recover the original quote/question/current judgment and open questions.
+5. Turn capture OFF; quoting creates no new anchor. Undo/delete a quote; check generated export and source-pointer cleanup.
+6. Optionally export into a new dedicated Vault folder. In Obsidian use Open thought browser and each of the five views. Test project/text filtering and copy-continue prompt. Confirm no HTML marker clutter.
+7. Keep legacy inbox notes/settings working, including backup-based upgrades; don't assume they were imported into SQLite.
+
+---
+
+## Earlier Thought Inbox validation record
+
 # 验证记录
 
 日期：2026-10-05（Asia/Shanghai）。版本：Thought Inbox 1.0.0。

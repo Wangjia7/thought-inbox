@@ -1,9 +1,9 @@
 {
   "id": "thought-inbox",
-  "name": "Thought Inbox",
-  "version": "1.1.0",
+  "name": "ThoughtGraph",
+  "version": "2.0.0",
   "minAppVersion": "1.13.7",
-  "description": "Capture thoughts locally, review a question queue, and track discussion outcomes separately from your own judgments.",
+  "description": "Browse how quoted moments evolve into questions, threads, and personal judgments with an optional local Codex companion.",
   "author": "jqwang",
   "isDesktopOnly": false
 }

@@ -1,0 +1,17 @@
+import { mkdir, copyFile, cp, rm, readFile, writeFile } from 'node:fs/promises';
+import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
+const { version } = JSON.parse(await readFile('manifest.json', 'utf8'));
+await rm('release', { recursive: true, force: true });
+await mkdir('release/thought-inbox', { recursive: true });
+for (const file of ['main.js', 'manifest.json', 'styles.css']) await copyFile(file, `release/thought-inbox/${file}`);
+await cp('dist/thoughtgraph', 'release/thoughtgraph', { recursive: true });
+await cp('release/thought-inbox', 'release/thoughtgraph/obsidian/thought-inbox', { recursive: true });
+const pluginZip = spawnSync('zip', ['-qr', 'thought-inbox.zip', 'thought-inbox'], { cwd: 'release', stdio: 'inherit' });
+if (pluginZip.status !== 0) throw new Error('Plugin archive failed.');
+const graphZip = spawnSync('zip', ['-qr', `thoughtgraph-${version}.zip`, 'thoughtgraph'], { cwd: 'release', stdio: 'inherit' });
+if (graphZip.status !== 0) throw new Error('Complete archive failed.');
+const files = ['thought-inbox.zip', `thoughtgraph-${version}.zip`];
+const checksums = await Promise.all(files.map(async file => `${createHash('sha256').update(await readFile(`release/${file}`)).digest('hex')}  ${file}`));
+await writeFile('release/SHA256SUMS.txt', checksums.join('\n') + '\n');
+console.log(`Packaged plugin + complete ThoughtGraph ${version} with checksums.`);

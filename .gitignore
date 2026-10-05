@@ -3,3 +3,8 @@ main.js
 *.js.map
 .test-build/
 .DS_Store
+dist/
+release/
+*.sqlite
+*.sqlite-*
+thoughtgraph-config*.toml

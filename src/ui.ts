@@ -247,6 +247,21 @@ export class SettingsTab extends PluginSettingTab {
   constructor(app: App, private plugin: ThoughtInboxPlugin) { super(app, plugin); }
   getSettingDefinitions(): SettingDefinitionItem[] {
     return [{
+      name: 'ThoughtGraph folder',
+      desc: 'Vault-relative folder containing the optional local MCP export (graph.json). The companion is configured separately; this setting does not connect or move records.',
+      aliases: ['ThoughtGraph', '思想线程', '路径'],
+      render: setting => {
+        let folder = this.plugin.settings.graphPath;
+        setting.addText(t => t.setValue(folder).onChange(v => { folder = v; })).addButton(b => b.setButtonText('Save folder').onClick(() => {
+          this.plugin.run(async () => {
+            const graphPath = normalizePath(validateInboxPath(folder, this.app.vault.configDir));
+            await this.plugin.saveData({ ...this.plugin.settings, graphPath });
+            this.plugin.settings.graphPath = graphPath;
+            this.plugin.refreshQueue(); new Notice('ThoughtGraph browser folder saved.');
+          });
+        }));
+      }
+    }, {
       name: 'Inbox folder',
       desc: 'Relative to the vault root. Changing this folder does not move existing notes; switch back to see them again.',
       aliases: ['path', '收件箱', '路径'],
@@ -257,8 +272,8 @@ export class SettingsTab extends PluginSettingTab {
             b.setDisabled(true);
             try {
               const inboxPath = normalizePath(validateInboxPath(folder, this.app.vault.configDir));
-              await this.plugin.saveData({ inboxPath });
-              this.plugin.settings = { inboxPath };
+              await this.plugin.saveData({ ...this.plugin.settings, inboxPath });
+              this.plugin.settings = { ...this.plugin.settings, inboxPath };
               this.plugin.refreshQueue(); new Notice('Inbox folder saved. Existing notes have not been moved.');
             } finally { b.setDisabled(false); }
           });

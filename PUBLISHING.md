@@ -2,11 +2,17 @@
 
 核对日期：2026-10-05。此文件说明你需要执行的公开发布操作；公开源码仓库为 https://github.com/Wangjia7/thought-inbox；市场条目尚未提交。
 
+## Complete ThoughtGraph package
+
+Run `npm run package` before tagging. Besides the three root Obsidian assets and plugin-only `thought-inbox.zip`, the workflow publishes **thoughtgraph-2.0.0.zip** (standalone MCP, Skill, setup guide, notices and Obsidian files) and `SHA256SUMS.txt`. The companion is optional; do not put its Node files inside the Obsidian plugin folder. Keep private SQLite/export/configuration files out of Git.
+
+Public display name is **ThoughtGraph**; the existing plugin ID remains **thought-inbox**. In a Community Plugins submission use the manifest's name/ID/description consistently, and explain the optional Codex companion and its separate desktop requirements. This package is not automatically listed in the market; review/approval of a submission is separate.
+
 ## 1. 建立公开源码仓库
 
 解压源码 ZIP，在 `thought-inbox/` 仓库根目录操作。先确认 `manifest.json` 的公开作者字段 `jqwang` 是你希望展示的名字，可以修改为你的真实公开名字或团队名。LICENSE 使用 MIT。名称 `Thought Inbox`、ID `thought-inbox` 已核对当前官方公开目录，无精确同名/同 ID 条目；提交时再确认一次，未公开或待审条目不能由目录镜像判断。
 
-在 GitHub 创建**公开**仓库，建议名称 `thought-inbox`，不要初始化另一份 README 或 LICENSE。将以下命令里的 `YOUR_GITHUB_USERNAME` 替换为自己的 GitHub 账号。需要 Node.js 22+ 与 Git：
+在 GitHub 创建**公开**仓库，建议名称 `thought-inbox`，不要初始化另一份 README 或 LICENSE。将以下命令里的 `YOUR_GITHUB_USERNAME` 替换为自己的 GitHub 账号。需要 Node.js 22.13+ 与 Git：
 
 ```sh
 npm ci --ignore-scripts
@@ -15,7 +21,7 @@ git init
 git branch -M main
 git add .
 git commit -m "Initial release of Thought Inbox"
-git remote add origin https://github.com/YOUR_GITHUB_USERNAME/thought-inbox.git
+git remote add origin https://github.com/Wangjia7/thought-inbox.git
 git push -u origin main
 ```
 
@@ -25,25 +31,25 @@ git push -u origin main
 
 在独立测试 Vault 手动安装三个编译文件后，按 [VALIDATION.md](VALIDATION.md) 的验收表验证加载、剪贴板、选中文本、队列、讨论和重复导入。当前自动验证不等于已经完成桌面或手机的端到端测试。`isDesktopOnly: false` 基于使用浏览器与公开 Obsidian API；发布给手机用户前至少完成一台 iOS/Android 设备验收，并如实记录实际覆盖。
 
-## 3. 发布 1.1.0
+## 3. 发布 2.0.0
 
-仓库包含 tag 触发的 `.github/workflows/release.yml`。确认仓库允许 GitHub Actions 运行。该 workflow 在通过检查后自动创建公开 Release，因此推 tag 前应已经完成上一步的人工验收。
+仓库包含 tag 触发的 `.github/workflows/release.yml`。确认仓库允许 GitHub Actions 运行。该 workflow 在通过检查后自动创建公开 Release，本次 GitHub 安装包先提供公开试用，实际 Vault/Codex 桌面验收尚未完成，见 VALIDATION.md。市场提交前应完成并记录人工验收。
 
 ```sh
-git tag 1.1.0
-git push origin 1.1.0
+git tag 2.0.0
+git push origin 2.0.0
 ```
 
-不要使用 `v1.1.0`。tag 必须与 `manifest.json.version` **完全一致**。等待 Actions 成功，然后打开 Releases 确认：
+不要使用 `v2.0.0`。tag 必须与 `manifest.json.version` **完全一致**。等待 Actions 成功，然后打开 Releases 确认：
 
-- Release tag 是 `1.1.0`，状态为已发布，非 draft、非 prerelease。
+- Release tag 是 `2.0.0`，状态为已发布，非 draft、非 prerelease。
 - **独立附件**包含 `main.js`、`manifest.json`、`styles.css`。
 - 另有 `thought-inbox.zip` 可供手动安装。
-- 根目录 manifest 和 Release 附件的 manifest 是同一版本，且版本映射为 `"1.1.0": "1.13.7"`。
+- 根目录 manifest 和 Release 附件的 manifest 是同一版本，且版本映射为 `"2.0.0": "1.13.7"`。
 
 只上传 ZIP 或只有 GitHub 自动生成的 Source code ZIP 不够，Obsidian 需要三个独立资产。
 
-如果不用 Actions，在本地 `npm run check` 成功后，在 GitHub → Releases → Draft a new release，选择或创建 tag `1.1.0`，上传这三个文件，填初版说明并发布。不要再同时推 tag 触发自动创建同一个 Release；二选一即可。
+如果不用 Actions，在本地 `npm run check` 成功后，在 GitHub → Releases → Draft a new release，选择或创建 tag `2.0.0`，上传这三个文件，填初版说明并发布。不要再同时推 tag 触发自动创建同一个 Release；二选一即可。
 
 ## 4. 提交当前 Community 目录
 
@@ -51,10 +57,10 @@ git push origin 1.1.0
 
 1. 打开 [Obsidian Community](https://community.obsidian.md)，使用 Obsidian 账号登录。
 2. 在个人资料里关联 GitHub 账号，以便验证你拥有该源码仓库。
-3. 选择添加插件（Add a plugin），填入 `https://github.com/YOUR_GITHUB_USERNAME/thought-inbox`，按页面要求填写说明。
+3. 选择添加插件（Add a plugin），填入 `https://github.com/Wangjia7/thought-inbox`，按页面要求填写说明。
 4. 核对平台读取的 ID、名称、描述、作者与默认分支根目录 manifest 一致。它读取默认分支 HEAD，不能只把 manifest 放进 Release。
 5. 查看自动扫描/审核结果。若有问题，修改源码，更新 CHANGELOG，递增版本，推源码并发布新的同号 Release；在后台继续按反馈处理。
-6. 通过审核并发布后，在 Obsidian 的 Community plugins 搜索 Thought Inbox，确认能从 Release 下载并正常启用。
+6. 通过审核并发布后，在 Obsidian 的 Community plugins 搜索 ThoughtGraph，确认能从 Release 下载并正常启用。
 
 ## 5. 后续版本
 
@@ -64,10 +70,10 @@ git push origin 1.1.0
 npm version patch --no-git-tag-version
 npm run check
 git add .
-git commit -m "Release 1.1.1"
+git commit -m "Release 2.0.1"
 git push origin main
-git tag 1.1.1
-git push origin 1.1.1
+git tag 2.0.1
+git push origin 2.0.1
 ```
 
 其中示例 `1.1.1` 必须替换为实际新版本。保留 versions.json 中的历史映射与旧 Releases，供较旧应用版本选择兼容版本。提交和审核时仍需平台处理；本包不能保证自动审核一定通过。
